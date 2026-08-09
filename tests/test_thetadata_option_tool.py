@@ -83,6 +83,7 @@ class ThetaDataOptionToolTest(unittest.TestCase):
     def setUp(self) -> None:
         sys.modules["thetadata"] = types.SimpleNamespace(ThetaClient=FakeThetaClient)
         theta._client_singleton = None
+        theta._client_credential_revision = None
         theta._market_data_cache.clear()
         theta._option_expirations_cache.clear()
         theta._option_snapshot_cache.clear()
@@ -91,6 +92,7 @@ class ThetaDataOptionToolTest(unittest.TestCase):
     def tearDown(self) -> None:
         yf_tool.collect_candidates = self._orig_yf_collect_candidates
         theta._client_singleton = None
+        theta._client_credential_revision = None
 
     def test_market_data_normalizes_quote_daily_intraday(self) -> None:
         data = theta.market_data("SPY")
@@ -169,6 +171,7 @@ class ThetaDataOptionToolTest(unittest.TestCase):
 
         sys.modules["thetadata"] = types.SimpleNamespace(ThetaClient=SessionClient)
         theta._client_singleton = None
+        theta._client_credential_revision = None
         theta._option_expirations_cache.clear()
 
         self.assertEqual(theta.option_expirations("SPY"), [future_expiration])

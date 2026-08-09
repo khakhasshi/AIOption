@@ -195,4 +195,4 @@ AI_OPTION_THETADATA_CREDENTIALS_FILE=...
 - `quote_option_contract(contract_symbol)`
 - `account_capabilities()`
 
-ThetaData 适配器只读取数据，不保存账号密码。生产部署请通过环境变量或 ThetaData credentials file 注入凭证。
+ThetaData 适配器只读取行情。管理员可通过“账户与连接”将服务器级账号密码加密保存到数据库，也可在生产部署中通过环境变量或 ThetaData credentials file 注入凭证；部署配置始终优先于 UI 保存值。API 不返回完整邮箱或密码，连接测试复用当前进程的单例会话。

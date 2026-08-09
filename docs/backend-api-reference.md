@@ -242,7 +242,34 @@ Admin。删除全局 provider。
 
 ---
 
-## 5. Longbridge Accounts
+## 5. ThetaData Configuration
+
+以下接口均要求 `is_admin`。保存的账号密码由服务器加密入库，响应只包含脱敏邮箱与配置来源。环境变量或 credentials file 的优先级高于数据库配置。
+
+### `GET /api/thetadata/config`
+返回是否已配置、当前来源、脱敏邮箱、更新时间以及是否存在部署配置覆盖。
+
+### `PUT /api/thetadata/config`
+保存或替换服务器级 ThetaData 凭证，并清理当前 Web 进程的 SDK 会话与行情缓存。
+
+```json
+{
+  "email": "research@example.com",
+  "password": "provider-password"
+}
+```
+
+### `DELETE /api/thetadata/config`
+删除从前端保存的凭证。环境变量或 credentials file 不会被删除。
+
+### `POST /api/thetadata/config/test`
+复用当前单例会话读取指定标的行情，避免为了测试额外创建并发登录。
+
+```json
+{ "symbol": "SPY" }
+```
+
+## 6. Longbridge Accounts
 
 ### `GET /api/longbridge/accounts`
 列出当前用户的 Longbridge 账号。
@@ -291,7 +318,7 @@ Admin。删除全局 provider。
 
 ---
 
-## 6. Broker Accounts
+## 7. Broker Accounts
 
 ### `GET /api/brokers/accounts`
 列出模块化券商账号（目前支持 Alpaca，预留 IBKR、Tradier 等）。

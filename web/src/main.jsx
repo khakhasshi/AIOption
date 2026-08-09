@@ -85,7 +85,7 @@ function App() {
   const [clockTick, setClockTick] = useState(Date.now());
   const [oauthConfig, setOauthConfig] = useState({ enabled: false, providers: [] });
   const [turnstileConfig, setTurnstileConfig] = useState({ enabled: false });
-  const [session, setSession] = useState(() => loadSessionCache() ?? { loading: true, authenticated: false, username: '', can_analyze: false, can_trade: false, is_admin: false, limits: {} });
+  const [session, setSession] = useState(() => loadSessionCache() ?? { loading: true, authenticated: false, username: '', can_analyze: false, can_trade: false, is_admin: false, broker_api_enabled: false, limits: {} });
   const [routePath, setRoutePath] = useState(window.location.pathname);
 
   const scanner = useScannerController({ api, providers, session });
@@ -179,7 +179,7 @@ function App() {
     if (!session.authenticated) return;
     refreshProviders();
     refreshAnalysisPresets();
-    if (session.can_trade) {
+    if (session.can_trade && session.broker_api_enabled) {
       refreshAccounts();
     } else {
       setAccounts([]);
@@ -191,7 +191,7 @@ function App() {
     refreshHistory();
     refreshTriggers();
     refreshMarketClock();
-  }, [session.authenticated, session.can_trade, session.is_admin]);
+  }, [session.authenticated, session.can_trade, session.is_admin, session.broker_api_enabled]);
 
   useEffect(() => {
     if (!session.authenticated) return;
@@ -235,9 +235,9 @@ function App() {
   }, [session.authenticated, session.can_trade]);
 
   useEffect(() => {
-    if (!session.authenticated || !session.can_trade) return;
+    if (!session.authenticated || !session.can_trade || !session.broker_api_enabled) return;
     refreshAuth(longbridgeAccount);
-  }, [longbridgeAccount, session.authenticated, session.can_trade]);
+  }, [longbridgeAccount, session.authenticated, session.can_trade, session.broker_api_enabled]);
 
   async function refreshAppSession() {
     try {
@@ -249,6 +249,7 @@ function App() {
         can_analyze: Boolean(row.can_analyze),
         can_trade: Boolean(row.can_trade),
         is_admin: Boolean(row.is_admin),
+        broker_api_enabled: Boolean(row.broker_api_enabled),
         limits: row.limits || {},
       };
       saveSessionCache(next);
@@ -274,6 +275,7 @@ function App() {
       can_analyze: Boolean(row.can_analyze),
       can_trade: Boolean(row.can_trade),
       is_admin: Boolean(row.is_admin),
+      broker_api_enabled: Boolean(row.broker_api_enabled),
       limits: row.limits || {},
     };
     saveSessionCache(next);
@@ -300,6 +302,7 @@ function App() {
       can_analyze: Boolean(row.can_analyze),
       can_trade: Boolean(row.can_trade),
       is_admin: Boolean(row.is_admin),
+      broker_api_enabled: Boolean(row.broker_api_enabled),
       limits: row.limits || {},
     };
     saveSessionCache(next);
@@ -340,11 +343,12 @@ function App() {
         can_analyze: Boolean(row.can_analyze),
         can_trade: Boolean(row.can_trade),
         is_admin: Boolean(row.is_admin),
+        broker_api_enabled: Boolean(row.broker_api_enabled),
         limits: row.limits || {},
       }));
       if (session.authenticated) {
         await Promise.allSettled([refreshProviders(), refreshHistory(), refreshMarketClock()]);
-        if (session.can_trade) await refreshAccounts();
+        if (row.can_trade && row.broker_api_enabled) await refreshAccounts();
         if (session.is_admin) await refreshAdminPanels();
       }
     } catch {

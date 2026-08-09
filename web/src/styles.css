@@ -243,11 +243,18 @@ button.danger:hover { background: #ff7373; }
 .quick-list button:hover { color: #7dd3a8; border-color: #5ec38f; }
 .provider-list, .provider-form { display: grid; gap: var(--space-2); }
 .provider { display: flex; align-items: center; justify-content: space-between; padding: 8px 9px; border-radius: var(--radius-sm); background: #111417; border: 1px solid #272c34; }
+.provider > div:first-child { min-width: 0; }
 .provider strong, .provider span { display: block; }
 .provider strong { color: #e5e7eb; }
 .provider span { color: #8a949f; font-size: 11px; margin-top: 1px; }
 .provider button, .ghost { display: inline-flex; gap: 6px; align-items: center; border: 1px solid rgba(255, 255, 255, .11); color: #d8dde5; background: #101214; border-radius: var(--radius-sm); padding: 6px 8px; font-size: 12px; }
 .provider button:hover, .ghost:hover { color: #7dd3a8; border-color: #5ec38f; }
+.provider-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+@media (max-width: 720px) {
+  .provider { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .provider > div:first-child { flex: 1 1 180px; }
+  .provider-actions { width: 100%; justify-content: flex-start; }
+}
 .ghost.compact { padding: 4px 7px; font-size: 11px; }
 .ghost.active { color: #101214; border-color: #7dd3a8; background: #7dd3a8; }
 .ghost:disabled { opacity: .42; cursor: not-allowed; }

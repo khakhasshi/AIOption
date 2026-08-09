@@ -79,6 +79,15 @@ curl http://127.0.0.1:7001/api/health
 
 打开 `http://127.0.0.1:7001`。默认可以进行本地研究，但券商和交易 API 不可用。
 
+本地演示管理员（来自 `.env.example`）：
+
+```text
+账号：local-admin
+密码：AIOption-Local-Admin-2026!
+```
+
+该账号拥有分析、交易页面、管理员和不限额权限，便于完整体验与截图；券商 API、交易调度、自动交易和订单监控的服务器总开关仍默认关闭。此公开密码**只能用于绑定 `127.0.0.1` 的本地实例**。部署到局域网或公网前，必须更换账号、密码、`AI_OPTION_AUTH_SECRET` 与 `AI_OPTION_CREDENTIAL_SECRET`。
+
 ### 本地开发
 
 需要 Python 3.12 和 Node.js 22：
@@ -119,13 +128,17 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 ### ThetaData
 
+管理员登录后可在“账户与连接 → ThetaData 数据源”保存、更新、删除并测试凭证。凭证由后端加密保存，前端只显示脱敏邮箱；扫描器、AI 对话、实例和复盘会复用同一份服务器级配置。
+
+生产部署也可以使用环境变量或 credentials file，且它们的优先级高于前端保存的配置：
+
 ```bash
 THETADATA_EMAIL=your-email
 THETADATA_PASSWORD=your-password
 # 或 THETADATA_CREDENTIALS_FILE=/run/secrets/thetadata-credentials
 ```
 
-订阅等级决定可用端点与历史深度。项目会在缺少完整 Greeks 时进行本地估算，但估算值必须与供应商原始字段区分。
+订阅等级决定可用端点与历史深度。项目会在缺少完整 Greeks 时进行本地估算，但估算值必须与供应商原始字段区分。ThetaData Cloud 通常限制同一账号的活动会话数量，请勿同时启动多个使用相同凭证的独立部署。
 
 ### Longbridge
 
@@ -140,7 +153,7 @@ LONGBRIDGE_ACCESS_TOKEN=your-access-token
 
 ### 登录与 OAuth
 
-应用在没有用户配置时采用本机开发模式。部署到局域网或公网前必须创建用户并设置长随机 `AI_OPTION_AUTH_SECRET`。Google、Apple OAuth 与 Turnstile 配置见 [OAuth 文档](docs/oauth-login-setup.md)。
+复制 `.env.example` 后可使用上方本地演示管理员。部署到局域网或公网前必须替换该公开账号，设置长随机 `AI_OPTION_AUTH_SECRET` 和 `AI_OPTION_CREDENTIAL_SECRET`，并优先使用密码哈希而不是明文密码。Google、Apple OAuth 与 Turnstile 配置见 [OAuth 文档](docs/oauth-login-setup.md)。
 
 生成密码哈希：
 
