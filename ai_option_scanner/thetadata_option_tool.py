@@ -572,6 +572,7 @@ def _option_snapshot_uncached(symbol: str, expiration: str) -> dict[str, dict[st
 # single re-login shared by all racing threads (see _reset_client).
 _client_lock = threading.RLock()
 _client_singleton: Any = None
+_client_credential_revision: str | None = None
 
 # A single ThetaClient wraps one gRPC session to the local Theta Terminal. That
 # session multiplexes responses by arrival order, NOT by request — so two threads
@@ -584,32 +585,46 @@ _client_singleton: Any = None
 _request_lock = threading.Lock()
 
 
-def _build_client() -> Any:
+def _build_client(credentials: Any | None = None) -> Any:
     try:
         from thetadata import ThetaClient
     except Exception as exc:  # noqa: BLE001
         raise ThetaDataUnavailable("thetadata package is not installed; install thetadata on Python 3.12+") from exc
-    email = os.getenv("THETADATA_EMAIL") or os.getenv("AI_OPTION_THETADATA_EMAIL")
-    password = os.getenv("THETADATA_PASSWORD") or os.getenv("AI_OPTION_THETADATA_PASSWORD")
-    creds_file = os.getenv("THETADATA_CREDENTIALS_FILE") or os.getenv("AI_OPTION_THETADATA_CREDENTIALS_FILE")
+    if credentials is None:
+        from .thetadata_store import resolve_thetadata_credentials
+
+        credentials = resolve_thetadata_credentials()
     try:
-        if email and password:
-            return ThetaClient(email=email, password=password, dataframe_type="pandas")
-        if creds_file:
-            return ThetaClient(creds_file=creds_file, dataframe_type="pandas")
+        if credentials.email and credentials.password:
+            return ThetaClient(email=credentials.email, password=credentials.password, dataframe_type="pandas")
+        if credentials.credentials_file:
+            return ThetaClient(creds_file=credentials.credentials_file, dataframe_type="pandas")
         return ThetaClient(dataframe_type="pandas")
     except Exception as exc:  # noqa: BLE001
         raise ThetaDataUnavailable(_error_message(exc)) from exc
 
 
 def _client() -> Any:
-    global _client_singleton
+    global _client_credential_revision, _client_singleton
+    from .thetadata_store import resolve_thetadata_credentials
+
+    credentials = resolve_thetadata_credentials()
     client = _client_singleton
-    if client is not None:
+    if client is not None and _client_credential_revision is None:
+        # Tests and embedded deployments may inject an already-authenticated
+        # client directly. Adopt it for the current credential revision instead
+        # of creating a second login that would invalidate that live session.
+        with _client_lock:
+            if _client_singleton is client and _client_credential_revision is None:
+                _client_credential_revision = credentials.revision
+            return _client_singleton
+    if client is not None and _client_credential_revision == credentials.revision:
         return client
     with _client_lock:
-        if _client_singleton is None:
-            _client_singleton = _build_client()
+        if _client_singleton is None or _client_credential_revision != credentials.revision:
+            _close_client(_client_singleton)
+            _client_singleton = _build_client(credentials)
+            _client_credential_revision = credentials.revision
         return _client_singleton
 
 
@@ -621,11 +636,40 @@ def _reset_client(stale: Any) -> Any:
     session instead of triggering its own login (which would invalidate the new
     session and cascade the failure across the scan universe).
     """
-    global _client_singleton
+    global _client_credential_revision, _client_singleton
     with _client_lock:
         if _client_singleton is stale or _client_singleton is None:
-            _client_singleton = _build_client()
+            from .thetadata_store import resolve_thetadata_credentials
+
+            credentials = resolve_thetadata_credentials()
+            _close_client(_client_singleton)
+            _client_singleton = _build_client(credentials)
+            _client_credential_revision = credentials.revision
         return _client_singleton
+
+
+def reset_client() -> None:
+    """Drop the cached SDK session after an admin changes credentials."""
+
+    global _client_credential_revision, _client_singleton
+    with _client_lock:
+        _close_client(_client_singleton)
+        _client_singleton = None
+        _client_credential_revision = None
+    _market_data_cache.clear()
+    _option_expirations_cache.clear()
+    _option_snapshot_cache.clear()
+
+
+def _close_client(client: Any | None) -> None:
+    if client is None:
+        return
+    close = getattr(client, "close", None)
+    if callable(close):
+        try:
+            close()
+        except Exception:
+            pass
 
 
 def _with_session_retry(callback: Callable[[Any], T], attempts: int = 3) -> T:
@@ -898,4 +942,11 @@ def _num(value: object) -> float:
 def _error_message(exc: Exception) -> str:
     message = str(exc)
     secret = os.getenv("THETADATA_PASSWORD") or os.getenv("AI_OPTION_THETADATA_PASSWORD") or ""
+    if not secret:
+        try:
+            from .thetadata_store import resolve_thetadata_credentials
+
+            secret = resolve_thetadata_credentials().password or ""
+        except Exception:
+            secret = ""
     return message.replace(secret, "***") if secret else message

@@ -88,6 +88,11 @@ from .longbridge_auth import auth_manager
 from .longbridge_client import kline as longbridge_kline, quote as longbridge_quote
 from .market_calendar import market_clock, market_environment, previous_nyse_trading_day
 from .time_utils import et_today
+from .thetadata_store import (
+    delete_thetadata_credentials,
+    save_thetadata_credentials,
+    thetadata_config_status,
+)
 from .yfinance_option_tool import market_data as yf_market_data
 from .longbridge_option_tool import collect_candidates as lb_collect_candidates, option_chain_info, option_expirations
 from .owner_migration import migrate_browser_owner_to_user
@@ -283,6 +288,15 @@ class AccountCredentialsRequest(BaseModel):
     app_key: str
     app_secret: str
     access_token: str
+
+
+class ThetaDataCredentialsRequest(BaseModel):
+    email: str
+    password: str
+
+
+class ThetaDataTestRequest(BaseModel):
+    symbol: str = "SPY"
 
 
 class BrokerAccountRequest(BaseModel):
@@ -806,15 +820,15 @@ def my_resource_usage(request: Request) -> dict[str, Any]:
 @app.get("/api/auth/me")
 def auth_me(request: Request) -> dict[str, Any]:
     if not auth_enabled():
-        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True}
+        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True, "broker_api_enabled": _broker_api_enabled()}
     username = verify_session_token(request.cookies.get(COOKIE_NAME))
-    return {"authenticated": bool(username), "username": username, "auth_enabled": True, **auth_user_permissions(username)}
+    return {"authenticated": bool(username), "username": username, "auth_enabled": True, "broker_api_enabled": _broker_api_enabled(), **auth_user_permissions(username)}
 
 
 @app.post("/api/auth/login")
 def auth_login(request: Request, response: Response, payload: LoginRequest) -> dict[str, Any]:
     if not auth_enabled():
-        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True}
+        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True, "broker_api_enabled": _broker_api_enabled()}
     if not payload.accepted_terms:
         raise HTTPException(status_code=400, detail="terms acceptance required")
     client_ip = request.client.host if request.client else "unknown"
@@ -847,7 +861,7 @@ def auth_login(request: Request, response: Response, payload: LoginRequest) -> d
         httponly=False,
         samesite="lax",
     )
-    return {"authenticated": True, "username": username, "auth_enabled": True, "owner_migration": migration, **auth_user_permissions(username)}
+    return {"authenticated": True, "username": username, "auth_enabled": True, "broker_api_enabled": _broker_api_enabled(), "owner_migration": migration, **auth_user_permissions(username)}
 
 
 @app.post("/api/auth/logout")
@@ -898,7 +912,7 @@ def _resolve_oauth_username(identity: dict[str, Any]) -> str:
 @app.post("/api/auth/oauth/login")
 def auth_oauth_login(request: Request, response: Response, payload: OAuthLoginRequest) -> dict[str, Any]:
     if not auth_enabled():
-        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True}
+        return {"authenticated": True, "username": "local", "auth_enabled": False, "can_trade": True, "is_admin": True, "broker_api_enabled": _broker_api_enabled()}
     if not payload.accepted_terms:
         raise HTTPException(status_code=400, detail="terms acceptance required")
     client_ip = request.client.host if request.client else "unknown"
@@ -926,6 +940,7 @@ def auth_oauth_login(request: Request, response: Response, payload: OAuthLoginRe
         "authenticated": True,
         "username": username,
         "auth_enabled": True,
+        "broker_api_enabled": _broker_api_enabled(),
         "owner_migration": migration,
         **auth_user_permissions(username),
     }
@@ -1428,6 +1443,58 @@ def delete_auth_user_route(request: Request, username: str) -> list[dict[str, An
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return auth_users_as_rows()
+
+
+@app.get("/api/thetadata/config")
+def get_thetadata_config(request: Request) -> dict[str, Any]:
+    _require_admin(request)
+    return thetadata_config_status()
+
+
+@app.put("/api/thetadata/config")
+def update_thetadata_config(request: Request, payload: ThetaDataCredentialsRequest) -> dict[str, Any]:
+    _require_admin(request)
+    try:
+        result = save_thetadata_credentials(payload.email, payload.password)
+        from .thetadata_option_tool import reset_client
+
+        reset_client()
+        return result
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/api/thetadata/config")
+def remove_thetadata_config(request: Request) -> dict[str, Any]:
+    _require_admin(request)
+    result = delete_thetadata_credentials()
+    from .thetadata_option_tool import reset_client
+
+    reset_client()
+    return result
+
+
+@app.post("/api/thetadata/config/test")
+def test_thetadata_config(request: Request, payload: ThetaDataTestRequest) -> dict[str, Any]:
+    _require_admin(request)
+    symbol = re.sub(r"[^A-Za-z0-9.^-]", "", str(payload.symbol or "SPY").upper())[:24] or "SPY"
+    try:
+        from .thetadata_option_tool import market_data as theta_market_data
+
+        data = theta_market_data(symbol)
+        quote = data.get("quote") if isinstance(data, dict) else {}
+        spot = float((quote or {}).get("last") or 0)
+        if spot <= 0:
+            raise ValueError(f"ThetaData returned no usable quote for {symbol}")
+        return {
+            "ok": True,
+            "symbol": symbol,
+            "price": spot,
+            "source": str((quote or {}).get("source") or "thetadata"),
+            "config": thetadata_config_status(),
+        }
+    except Exception as exc:  # noqa: BLE001 - return a bounded provider diagnostic to the admin.
+        raise HTTPException(status_code=502, detail=f"ThetaData connection failed: {str(exc)[:240]}") from exc
 
 
 @app.get("/api/longbridge/accounts")

@@ -20,6 +20,7 @@ export function AccountsPage({
   const { embedded } = useAppShell();
   const canAdmin = Boolean(session?.is_admin);
   const canTrade = Boolean(session?.can_trade);
+  const brokerAvailable = canTrade && Boolean(session?.broker_api_enabled);
   const userProviders = providers.filter((p) => p.server_managed === false);
   const serverProviders = providers.filter((p) => p.server_managed !== false);
 
@@ -41,6 +42,11 @@ export function AccountsPage({
   // Admin server-provider form
   const [svForm, setSvForm] = useState(emptyProvider);
 
+  // Server-level ThetaData credentials (admin only)
+  const [thetaConfig, setThetaConfig] = useState(null);
+  const [thetaForm, setThetaForm] = useState({ email: '', password: '' });
+  const [thetaTest, setThetaTest] = useState(null);
+
   // OAuth login bindings (Google / Apple)
   const [oauthLinks, setOauthLinks] = useState([]);
   const [oauthHasPassword, setOauthHasPassword] = useState(true);
@@ -54,15 +60,20 @@ export function AccountsPage({
 
   async function refreshAll() {
     setError('');
-    try {
-      const [lb, brokers] = await Promise.all([
-        canTrade ? api('/api/longbridge/accounts') : Promise.resolve([]),
-        canTrade ? api('/api/brokers/accounts') : Promise.resolve([]),
-      ]);
-      setLbAccounts(lb || []);
-      setBrokerRows(brokers || []);
-    } catch (e) {
-      setError(e.message);
+    const results = await Promise.allSettled([
+        brokerAvailable ? api('/api/longbridge/accounts') : Promise.resolve([]),
+        brokerAvailable ? api('/api/brokers/accounts') : Promise.resolve([]),
+        canAdmin ? api('/api/thetadata/config') : Promise.resolve(null),
+    ]);
+    if (results[0].status === 'fulfilled') setLbAccounts(results[0].value || []);
+    if (results[1].status === 'fulfilled') setBrokerRows(results[1].value || []);
+    if (results[2].status === 'fulfilled') setThetaConfig(results[2].value);
+    const failure = results.find((result) => (
+      result.status === 'rejected'
+      && !String(result.reason?.message || '').includes('broker and trading APIs are disabled')
+    ));
+    if (failure?.status === 'rejected') {
+      setError(failure.reason?.message || t('admin2.connectionLoadFailed'));
     }
   }
 
@@ -262,6 +273,45 @@ export function AccountsPage({
     } catch (e) { setError(e.message); }
   }
 
+  async function saveTheta(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    setThetaTest(null);
+    try {
+      const status = await api('/api/thetadata/config', {
+        method: 'PUT',
+        body: JSON.stringify(thetaForm),
+      });
+      setThetaConfig(status);
+      setThetaForm({ email: '', password: '' });
+    } catch (e2) { setError(e2.message); } finally { setBusy(false); }
+  }
+
+  async function testTheta() {
+    setBusy(true);
+    setError('');
+    setThetaTest(null);
+    try {
+      const result = await api('/api/thetadata/config/test', {
+        method: 'POST',
+        body: JSON.stringify({ symbol: 'SPY' }),
+      });
+      setThetaTest(result);
+      setThetaConfig(result.config || thetaConfig);
+    } catch (e2) { setError(e2.message); } finally { setBusy(false); }
+  }
+
+  async function deleteTheta() {
+    if (!confirm(t('admin2.confirmDeleteTheta'))) return;
+    setBusy(true);
+    setError('');
+    setThetaTest(null);
+    try {
+      setThetaConfig(await api('/api/thetadata/config', { method: 'DELETE' }));
+    } catch (e2) { setError(e2.message); } finally { setBusy(false); }
+  }
+
   return (
     <main className="shell accounts-shell">
       {embedded && (
@@ -280,8 +330,61 @@ export function AccountsPage({
       {error && <div className="error-banner">{error}</div>}
 
       <div className="accounts-grid">
+        {canAdmin && (
+          <section className="panel">
+            <SectionTitle title={t('admin2.thetaTitle')} />
+            <p className="muted">{t('admin2.thetaDesc')}</p>
+            <div className="provider-list">
+              <div className="provider">
+                <div>
+                  <strong>ThetaData Cloud</strong>
+                  <span>
+                    {thetaConfig?.configured
+                      ? `${t('admin2.thetaConfigured')} · ${thetaConfig.email_hint || t('admin2.thetaCredentialsFile')} · ${t(`admin2.thetaSource_${thetaConfig.source}`)}`
+                      : t('admin2.thetaNotConfigured')}
+                    {thetaConfig?.updated_at ? ` · ${new Date(thetaConfig.updated_at).toLocaleString()}` : ''}
+                  </span>
+                </div>
+                <div className="provider-actions">
+                  <button type="button" onClick={testTheta} disabled={busy || !thetaConfig?.configured}>{t('admin2.testConnection')}</button>
+                  {thetaConfig?.stored_configured && (
+                    <button type="button" onClick={deleteTheta} disabled={busy}>{t('common.delete')}</button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {thetaConfig?.warning && <p className="permission-note is-danger">{thetaConfig.warning}</p>}
+            {thetaConfig?.environment_override && <p className="permission-note">{t('admin2.thetaEnvOverride')}</p>}
+            {thetaTest?.ok && (
+              <p className="permission-note">{t('admin2.thetaTestPassed').replace('{symbol}', thetaTest.symbol).replace('{price}', Number(thetaTest.price).toFixed(2))}</p>
+            )}
+            <details className="account-form-disclosure" open={!thetaConfig?.configured}>
+              <summary>{thetaConfig?.stored_configured ? t('admin2.updateTheta') : t('admin2.saveTheta')}</summary>
+              <form className="provider-form" onSubmit={saveTheta}>
+                <input
+                  type="email"
+                  placeholder={t('admin2.thetaEmail')}
+                  value={thetaForm.email}
+                  onChange={(e) => setThetaForm({ ...thetaForm, email: e.target.value.trim() })}
+                  autoComplete="username"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder={t('admin2.thetaPassword')}
+                  value={thetaForm.password}
+                  onChange={(e) => setThetaForm({ ...thetaForm, password: e.target.value })}
+                  autoComplete="new-password"
+                  required
+                />
+                <button type="submit" disabled={busy || thetaConfig?.environment_override}>{t('admin2.saveTheta')}</button>
+              </form>
+            </details>
+          </section>
+        )}
+
         {/* 券商账号 */}
-        {canTrade ? (
+        {brokerAvailable ? (
           <>
             <BrokerCard
               brand="Longbridge"
@@ -350,7 +453,7 @@ export function AccountsPage({
         ) : (
           <section className="panel">
             <SectionTitle title={t('admin2.brokerAccounts')} />
-            <p className="muted">{t('admin2.tradeNotEnabled')}</p>
+            <p className="muted">{canTrade ? t('admin2.brokerApiDisabled') : t('admin2.tradeNotEnabled')}</p>
           </section>
         )}
 
