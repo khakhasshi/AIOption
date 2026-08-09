@@ -1,0 +1,26 @@
+name: Feature request
+description: 提议新的研究、数据、风控或工作流能力。
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: 数据来源与语义
+      description: 包括 provider、频率、新鲜度、调整方式和授权边界。
+  - type: textarea
+    id: failure
+    attributes:
+      label: 失败模式与安全边界

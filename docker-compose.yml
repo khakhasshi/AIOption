@@ -1,0 +1,97 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ai-option-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_option
+      POSTGRES_USER: ai_option
+      POSTGRES_PASSWORD: ${AI_OPTION_POSTGRES_PASSWORD:-ai_option_local_only}
+      TZ: America/New_York
+    ports:
+      - "127.0.0.1:54321:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_option -d ai_option"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-option-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:63790:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: ai-option-scanner
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7001:7001"
+    volumes:
+      # Legacy SQLite data / migration source
+      - app-data:/app/data
+      # Longbridge account profiles (isolated HOME dirs)
+      - lb-accounts:/app/.longbridge_accounts
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - TZ=America/New_York
+      - AI_OPTION_PROCESS_ROLE=web
+      - AI_OPTION_DATABASE_URL=${AI_OPTION_DATABASE_URL:-postgresql://ai_option:${AI_OPTION_POSTGRES_PASSWORD:-ai_option_local_only}@db:5432/ai_option}
+      - AI_OPTION_REDIS_URL=${AI_OPTION_REDIS_URL:-redis://redis:6379/0}
+      - AI_OPTION_ENABLE_BROKER_API=${AI_OPTION_ENABLE_BROKER_API:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  worker:
+    build: .
+    container_name: ai-option-worker
+    restart: unless-stopped
+    command: ["python", "-m", "ai_option_scanner.worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - app-data:/app/data
+      - lb-accounts:/app/.longbridge_accounts
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - TZ=America/New_York
+      - AI_OPTION_PROCESS_ROLE=worker
+      - AI_OPTION_DATABASE_URL=${AI_OPTION_DATABASE_URL:-postgresql://ai_option:${AI_OPTION_POSTGRES_PASSWORD:-ai_option_local_only}@db:5432/ai_option}
+      - AI_OPTION_REDIS_URL=${AI_OPTION_REDIS_URL:-redis://redis:6379/0}
+      - AI_OPTION_ENABLE_TRADING_SCHEDULER=${AI_OPTION_ENABLE_TRADING_SCHEDULER:-false}
+      - AI_OPTION_ENABLE_AUTO_TRADE_SCHEDULER=${AI_OPTION_ENABLE_AUTO_TRADE_SCHEDULER:-false}
+      - AI_OPTION_ENABLE_ORDER_MONITOR=${AI_OPTION_ENABLE_ORDER_MONITOR:-false}
+
+volumes:
+  pg-data:
+  redis-data:
+  app-data:
+  lb-accounts:

@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aioption-workbench"
+version = "0.1.0"
+description = "Research-first US options analysis and execution workbench"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+  { name = "Jiang Jingzhe", email = "jiangjingzhe2004@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "yfinance>=0.2.65",
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "longbridge==4.3.2",
+  "thetadata==1.0.7",
+  "psycopg[binary]>=3.2.3",
+  "redis>=5.0.8",
+  "cryptography>=43.0.0",
+  "PyJWT>=2.9.0",
+]
+
+[project.scripts]
+aioption = "ai_option_scanner.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ai_option_scanner*"]

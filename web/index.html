@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0c10" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AI Option" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="application-name" content="AI Option" />
+    <title>AI Option Scanner</title>
+  </head>
+  <body>
+    <!-- i18n boot stub. Real implementation (reading src/i18n/*.js) is installed
+         by src/i18n/index.js when the bundle evaluates; this only covers the
+         sub-second window before that and any pre-bundle _t() call. -->
+    <script>
+      (function(){var k="ai_option_locale",L={zh:1,en:1},
+      l=((navigator.language||'').toLowerCase().startsWith('en')?'en':'zh');
+      try{var s=localStorage.getItem(k);if(s&&L[s])l=s;}catch(e){}
+      window._t=function(p){return p;};
+      window._getLocale=function(){return l;};
+      window._setLocale=function(lg){l=L[lg]?lg:'zh';try{localStorage.setItem(k,l);}catch(e){}return l;};
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      /* SW disabled for local development — avoids stale index.html cache */
+      if (false && 'serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Only reload on controllerchange if a worker already controlled this
+          // page (i.e. an update is replacing it) — not on the first install.
+          const hadController = Boolean(navigator.serviceWorker.controller);
+          navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then((registration) => {
+            registration.update().catch(() => {});
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              if (refreshing || !hadController) return;
+              refreshing = true;
+              window.location.reload();
+            });
+          }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

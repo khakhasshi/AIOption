@@ -1,0 +1,38 @@
+name: Bug report
+description: 报告可复现的问题，请先删除所有凭证和账户信息。
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 请勿粘贴 API key、access token、真实订单 ID、账户号或未脱敏日志。
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 实际行为
+      description: 发生了什么？
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit / version
+  - type: dropdown
+    id: execution
+    attributes:
+      label: 是否涉及订单执行
+      options: [否, 模拟账户, 真实账户]
+    validations:
+      required: true
