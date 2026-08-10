@@ -1,4 +1,4 @@
 -r requirements.txt
 pandas>=2.2.0
-polars>=1.0.0
+polars>=1.43.2
 python-dotenv>=1.0.0
