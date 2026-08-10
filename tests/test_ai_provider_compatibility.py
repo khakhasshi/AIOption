@@ -94,6 +94,30 @@ class AIProviderCompatibilityTest(unittest.TestCase):
         self.assertEqual(body["temperature"], 0.3)
         self.assertEqual(body["messages"], [{"role": "user", "content": '{"symbol": "NVDA"}'}])
 
+    def test_deepseek_v4_request_disables_thinking(self) -> None:
+        provider = AIProvider(
+            name="deepseek",
+            base_url="https://api.deepseek.com",
+            model="deepseek-v4-flash",
+            api_key_env="DEEPSEEK_API_KEY",
+        )
+
+        body = ai_client._apply_openai_model_options({"model": provider.model}, provider)
+
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+
+    def test_non_deepseek_request_does_not_receive_thinking_option(self) -> None:
+        provider = AIProvider(
+            name="openai-compatible",
+            base_url="https://api.example.com",
+            model="example-v4-flash",
+            api_key_env="EXAMPLE_API_KEY",
+        )
+
+        body = ai_client._apply_openai_model_options({"model": provider.model}, provider)
+
+        self.assertNotIn("thinking", body)
+
     def test_user_provider_persists_claude_compatible_type(self) -> None:
         rows = ai_provider_store.upsert_user_provider(
             owner_id="owner-a",
