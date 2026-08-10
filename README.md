@@ -4,7 +4,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 
 中文 | [English](README.en.md)
 
@@ -12,7 +12,7 @@
 
 它把自然语言扫描、正股与期权链、IV/RV/GEX、策略构造、AI 交叉审查、券商执行、软件风控和交易复盘放进同一条可检查的决策链。系统关注的不是让模型给出一句“买什么”，而是让每次判断都能回答：**用了什么数据、为什么选择这个结构、最大风险是多少、什么条件会推翻结论。**
 
-> **高风险提示**：本项目处于 Alpha 阶段，仅用于研究、辅助决策和自动化工作流验证，不构成投资建议。期权可能快速损失全部本金。开源版本默认关闭券商与自动交易接口；任何实盘使用都必须由操作者自行审计、配置并承担后果。
+> **高风险提示**：本项目处于 Alpha 阶段，仅用于研究、辅助决策和自动化工作流验证，不构成投资建议。期权可能快速损失全部本金。公开源码版本默认关闭券商与自动交易接口；任何实盘使用都必须由操作者自行审计、配置并承担后果。
 
 ## 从一句话到可复核决策
 
@@ -296,7 +296,7 @@ docker build -t aioption:local .
 - [部署手册](docs/deployment-runbook.md)
 - [安全政策](SECURITY.md)
 - [贡献指南](CONTRIBUTING.md)
-- [开源准备清单](docs/OPEN_SOURCE_READINESS.md)
+- [公开发布准备清单](docs/OPEN_SOURCE_READINESS.md)
 
 ## 贡献
 
@@ -306,4 +306,6 @@ docker build -t aioption:local .
 
 Jiang Jingzhe（江景哲），Email: jiangjingzhe2004@gmail.com
 
-项目采用 [Apache License 2.0](LICENSE)。第三方数据和 SDK 仍受各自供应商条款约束。
+当前版本采用 [PolyForm Noncommercial License 1.0.0](LICENSE)，仅允许许可证定义的非商业用途。商业使用需要另行取得书面授权，请联系 jiangjingzhe2004@gmail.com。
+
+此前已经按 Apache License 2.0 发布的历史版本继续受原授权约束，当前变更不会追溯撤销已授予的许可。详见 [许可说明](LICENSING.md)。第三方数据和 SDK 仍受各自供应商条款约束。

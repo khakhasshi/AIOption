@@ -4,7 +4,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 
 [中文](README.md) | English
 
@@ -12,7 +12,7 @@
 
 AIOption connects natural-language scans, stock and option-chain data, implied and realized volatility, dealer exposure, strategy construction, AI review, broker execution, software risk controls, and post-trade analysis. Each decision records its data, structure rationale, maximum risk, and invalidation conditions instead of returning an unsupported trade call.
 
-> **Risk warning:** This Alpha software supports research, decision review, and workflow validation. It does not provide investment advice. Options can lose their entire value quickly. The open-source configuration disables broker and automated-trading APIs by default. You must audit every configuration and accept responsibility for any live use.
+> **Risk warning:** This Alpha software supports research, decision review, and workflow validation. It does not provide investment advice. Options can lose their entire value quickly. The public source release disables broker and automated-trading APIs by default. You must audit every configuration and accept responsibility for any live use.
 
 ## Turn one request into a reviewable decision
 
@@ -301,7 +301,7 @@ Historical downloads and adaptive-entry research scripts need the optional depen
 - [Deployment runbook](docs/deployment-runbook.md)
 - [Security policy](SECURITY.md)
 - [Contribution guide](CONTRIBUTING.md)
-- [Open-source readiness checklist](docs/OPEN_SOURCE_READINESS.md)
+- [Public-release readiness checklist](docs/OPEN_SOURCE_READINESS.md)
 
 ## Contribute to AIOption
 
@@ -311,4 +311,6 @@ Open an issue or pull request to contribute. Changes to execution, risk controls
 
 Jiang Jingzhe, 江景哲. Email: jiangjingzhe2004@gmail.com
 
-AIOption uses the [Apache License 2.0](LICENSE). Third-party market data and SDKs remain subject to their providers' terms.
+The current release uses the [PolyForm Noncommercial License 1.0.0](LICENSE). It permits only the noncommercial purposes defined by the license. Contact jiangjingzhe2004@gmail.com for a separate commercial license.
+
+Historical versions already released under Apache License 2.0 remain governed by that license. This change does not revoke previously granted rights. Read the [licensing history and commercial-use policy](LICENSING.md). Third-party market data and SDKs remain subject to their providers' terms.

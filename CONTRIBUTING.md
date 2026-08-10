@@ -29,4 +29,4 @@ docs: clarify ThetaData subscription boundary
 test: cover duplicate broker submission
 ```
 
-提交代码即表示你同意按 Apache-2.0 许可证提供贡献。
+提交代码即表示你确认拥有提交内容的授权，并同意按 [PolyForm Noncommercial License 1.0.0](LICENSE) 向本项目提供贡献。商业授权或其他许可安排必须取得版权所有者的书面同意。
