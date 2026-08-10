@@ -39,6 +39,15 @@ def _provider_has_credentials(provider: AIProvider) -> bool:
     return bool(provider.api_key or os.getenv(provider.api_key_env))
 
 
+def _apply_openai_model_options(body: dict[str, Any], provider: AIProvider) -> dict[str, Any]:
+    """Apply provider-specific request options without affecting compatible APIs."""
+    model = provider.model.strip().lower()
+    provider_identity = " ".join((provider.name, provider.base_url, model)).lower()
+    if "deepseek" in provider_identity and "v4" in model:
+        body["thinking"] = {"type": "disabled"}
+    return body
+
+
 def ask_ai(
     system_prompt: str,
     user_payload: dict[str, Any],
@@ -108,14 +117,14 @@ def ask_openai_compatible(
         return None
 
     temp = provider.temperature if temperature is None else max(0.0, min(float(temperature), 2.0))
-    body = {
+    body = _apply_openai_model_options({
         "model": provider.model,
         "temperature": temp,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
-    }
+    }, provider)
     if response_format:
         body["response_format"] = response_format
     request = urllib.request.Request(
@@ -250,13 +259,13 @@ def chat_with_tools(
         return {"ok": False, "supported": True, "message": None, "error": "missing api key"}
 
     temp = provider.temperature if temperature is None else max(0.0, min(float(temperature), 2.0))
-    body = {
+    body = _apply_openai_model_options({
         "model": provider.model,
         "temperature": temp,
         "messages": messages,
         "tools": tools,
         "tool_choice": "auto",
-    }
+    }, provider)
     request = urllib.request.Request(
         f"{provider.base_url.rstrip('/')}/chat/completions",
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
@@ -387,7 +396,7 @@ def _stream_openai(
         return
 
     temp = provider.temperature if temperature is None else max(0.0, min(float(temperature), 2.0))
-    body = {
+    body = _apply_openai_model_options({
         "model": provider.model,
         "temperature": temp,
         "stream": True,
@@ -395,7 +404,7 @@ def _stream_openai(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
-    }
+    }, provider)
     url = urllib.parse.urlparse(provider.base_url)
     path = url.path.rstrip("/") + "/chat/completions"
     headers = {
@@ -457,12 +466,12 @@ def stream_chat_messages(
     if not api_key:
         return
     temp = provider.temperature if temperature is None else max(0.0, min(float(temperature), 2.0))
-    body = {
+    body = _apply_openai_model_options({
         "model": provider.model,
         "temperature": temp,
         "stream": True,
         "messages": messages,
-    }
+    }, provider)
     url = urllib.parse.urlparse(provider.base_url)
     path = url.path.rstrip("/") + "/chat/completions"
     headers = {
