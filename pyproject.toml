@@ -21,7 +21,7 @@ dependencies = [
   "yfinance>=0.2.65",
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.30.0",
-  "longbridge==4.3.2",
+  "longbridge==4.4.3",
   "thetadata==1.0.7",
   "psycopg[binary]>=3.2.3",
   "redis>=5.0.8",
